@@ -1,7 +1,5 @@
 //#![feature(nothreads)]
-#[macro_use]
-extern crate slog;
-use slog::{Fuse, Logger};
+use slog::{info, o, Fuse, Logger};
 use std::cell::RefCell;
 use std::rc::Rc;
 

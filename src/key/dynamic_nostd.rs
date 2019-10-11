@@ -1,16 +1,15 @@
-
-use alloc::String;
 use alloc::borrow::Cow;
-use alloc::Clone;
+use alloc::string::String;
 use alloc::string::ToString;
+use core::clone::Clone;
 
-use core::convert::{From,Into,AsRef};
+use core::cmp::PartialEq;
+use core::convert::{AsRef, From, Into};
+use core::fmt;
+use core::hash::{Hash, Hasher};
+use core::iter::{FromIterator, IntoIterator};
 use core::ops::Deref;
 use core::str::FromStr;
-use core::cmp::PartialEq;
-use core::hash::{Hash,Hasher};
-use core::iter::{FromIterator, IntoIterator};
-use core::fmt;
 
 /// Opaque Key is a representation of a key.
 ///
@@ -18,11 +17,10 @@ use core::fmt;
 /// key to follow.
 #[derive(Clone)]
 pub struct Key {
-    data: Cow<'static, str>
+    data: Cow<'static, str>,
 }
 
 impl Key {
-
     pub fn len(&self) -> usize {
         self.data.len()
     }
@@ -39,7 +37,7 @@ impl Key {
 impl Default for Key {
     fn default() -> Key {
         Key {
-            data: Cow::Borrowed("")
+            data: Cow::Borrowed(""),
         }
     }
 }
@@ -48,7 +46,7 @@ impl Hash for Key {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self.data {
             Cow::Borrowed(ref ptr) => ptr.hash(state),
-            Cow::Owned(ref ptr) => ptr.hash(state)
+            Cow::Owned(ref ptr) => ptr.hash(state),
         }
     }
 }
@@ -57,7 +55,7 @@ impl From<&'static str> for Key {
     #[inline(always)]
     fn from(data: &'static str) -> Key {
         Key {
-            data: Cow::Borrowed(data)
+            data: Cow::Borrowed(data),
         }
     }
 }
@@ -65,56 +63,58 @@ impl From<&'static str> for Key {
 impl From<String> for Key {
     #[inline(always)]
     fn from(data: String) -> Key {
-        Key{
-            data: Cow::Owned(data)
+        Key {
+            data: Cow::Owned(data),
         }
     }
 }
 
 impl FromIterator<char> for Key {
-    fn from_iter<I: IntoIterator<Item=char>>(iter: I) -> Key {
+    fn from_iter<I: IntoIterator<Item = char>>(iter: I) -> Key {
         Key {
-            data: Cow::Owned(iter.into_iter().collect::<String>())
+            data: Cow::Owned(iter.into_iter().collect::<String>()),
         }
     }
 }
 
 impl<'a> FromIterator<&'a char> for Key {
-    fn from_iter<I: IntoIterator<Item=&'a char>>(iter: I) -> Key {
+    fn from_iter<I: IntoIterator<Item = &'a char>>(iter: I) -> Key {
         Key {
-            data: Cow::Owned(iter.into_iter().collect::<String>())
+            data: Cow::Owned(iter.into_iter().collect::<String>()),
         }
     }
 }
 
 impl FromIterator<String> for Key {
-    fn from_iter<I: IntoIterator<Item=String>>(iter: I) -> Key {
+    fn from_iter<I: IntoIterator<Item = String>>(iter: I) -> Key {
         Key {
-            data: Cow::Owned(iter.into_iter().collect::<String>())
+            data: Cow::Owned(iter.into_iter().collect::<String>()),
         }
     }
 }
 
 impl<'a> FromIterator<&'a String> for Key {
-    fn from_iter<I: IntoIterator<Item=&'a String>>(iter: I) -> Key {
+    fn from_iter<I: IntoIterator<Item = &'a String>>(iter: I) -> Key {
         Key {
-            data: Cow::Owned(iter.into_iter().map(|x| x.as_str()).collect::<String>())
+            data: Cow::Owned(
+                iter.into_iter().map(|x| x.as_str()).collect::<String>(),
+            ),
         }
     }
 }
 
 impl<'a> FromIterator<&'a str> for Key {
-    fn from_iter<I: IntoIterator<Item=&'a str>>(iter: I) -> Key {
+    fn from_iter<I: IntoIterator<Item = &'a str>>(iter: I) -> Key {
         Key {
-            data: Cow::Owned(iter.into_iter().collect::<String>())
+            data: Cow::Owned(iter.into_iter().collect::<String>()),
         }
     }
 }
 
-impl<'a> FromIterator<Cow<'a,str>> for Key {
-    fn from_iter<I: IntoIterator<Item=Cow<'a,str>>>(iter: I) -> Key {
+impl<'a> FromIterator<Cow<'a, str>> for Key {
+    fn from_iter<I: IntoIterator<Item = Cow<'a, str>>>(iter: I) -> Key {
         Key {
-            data: Cow::Owned(iter.into_iter().collect::<String>())
+            data: Cow::Owned(iter.into_iter().collect::<String>()),
         }
     }
 }
@@ -149,7 +149,7 @@ impl fmt::Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.data {
             Cow::Borrowed(ref ptr) => write!(f, "{}", ptr),
-            Cow::Owned(ref ptr) => write!(f, "{}", ptr)
+            Cow::Owned(ref ptr) => write!(f, "{}", ptr),
         }
     }
 }
@@ -157,8 +157,7 @@ impl fmt::Debug for Key {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.data {
             Cow::Borrowed(ref ptr) => write!(f, "{:?}", ptr),
-            Cow::Owned(ref ptr) => write!(f, "{:?}", ptr)
+            Cow::Owned(ref ptr) => write!(f, "{:?}", ptr),
         }
     }
 }
-

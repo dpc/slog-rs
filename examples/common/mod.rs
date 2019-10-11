@@ -4,7 +4,7 @@ use std::{fmt, result};
 pub struct PrintlnSerializer;
 
 impl Serializer for PrintlnSerializer {
-    fn emit_arguments(&mut self, key: Key, val: &fmt::Arguments) -> Result {
+    fn emit_arguments(&mut self, key: Key, val: &fmt::Arguments<'_>) -> Result {
         print!(", {}={}", key, val);
         Ok(())
     }
@@ -18,10 +18,9 @@ impl Drain for PrintlnDrain {
 
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Self::Err> {
-
         print!("{}", record.msg());
 
         record

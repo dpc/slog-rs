@@ -1,8 +1,8 @@
-use {Discard, Logger};
+use crate::{Discard, Logger};
 
 // Separate module to test lack of imports
 mod no_imports {
-    use {Discard, Logger};
+    use crate::{Discard, Logger};
     /// ensure o! macro expands without error inside a module
     #[test]
     fn test_o_macro_expansion() {
@@ -38,7 +38,7 @@ mod std_only {
             type Err = Never;
             fn log(
                 &self,
-                record: &Record,
+                record: &Record<'_>,
                 values: &OwnedKVList,
             ) -> std::result::Result<Self::Ok, Self::Err> {
                 assert_eq!(
@@ -61,6 +61,8 @@ mod std_only {
     }
 }
 
+// Allow unused_must_use for macro testing.
+#[allow(unused_must_use)]
 #[test]
 fn expressions() {
     use super::{Record, Result, Serializer, KV};
@@ -158,8 +160,8 @@ fn expressions() {
         impl KV for K {
             fn serialize(
                 &self,
-                _record: &Record,
-                _serializer: &mut Serializer,
+                _record: &Record<'_>,
+                _serializer: &mut dyn Serializer,
             ) -> Result {
                 Ok(())
             }
@@ -170,9 +172,8 @@ fn expressions() {
         let _log = log.new(o!(x.clone()));
         let _log = log.new(o!("foo" => "bar", x.clone()));
         let _log = log.new(o!("foo" => "bar", x.clone(), x.clone()));
-        let _log = log.new(
-            slog_o!("foo" => "bar", x.clone(), x.clone(), "aaa" => "bbb"),
-        );
+        let _log = log
+            .new(slog_o!("foo" => "bar", x.clone(), x.clone(), "aaa" => "bbb"));
 
         info!(log, "message"; "foo" => "bar", &x, &x, "aaa" => "bbb");
     }
@@ -207,11 +208,12 @@ fn expressions_fmt() {
 
 #[test]
 fn makers() {
-    use ::*;
+    use crate::*;
     let drain = Duplicate(
         Discard.filter(|r| r.level().is_at_least(Level::Info)),
         Discard.filter_level(Level::Warning),
-    ).map(Fuse);
+    )
+    .map(Fuse);
     let _log = Logger::root(
         Arc::new(drain),
         o!("version" => env!("CARGO_PKG_VERSION")),
@@ -220,7 +222,7 @@ fn makers() {
 
 #[test]
 fn simple_logger_erased() {
-    use ::*;
+    use crate::*;
 
     fn takes_arced_drain(_l: Logger) {}
 
@@ -233,14 +235,15 @@ fn simple_logger_erased() {
 
 #[test]
 fn logger_to_erased() {
-    use ::*;
+    use crate::*;
 
     fn takes_arced_drain(_l: Logger) {}
 
     let drain = Duplicate(
         Discard.filter(|r| r.level().is_at_least(Level::Info)),
         Discard.filter_level(Level::Warning),
-    ).map(Fuse);
+    )
+    .map(Fuse);
     let log =
         Logger::root_typed(drain, o!("version" => env!("CARGO_PKG_VERSION")));
 
@@ -249,11 +252,11 @@ fn logger_to_erased() {
 
 #[test]
 fn logger_by_ref() {
-    use ::*;
+    use crate::*;
     let drain = Discard.filter_level(Level::Warning).map(Fuse);
-    let log = Logger::root_typed(drain, o!("version" => env!("CARGO_PKG_VERSION")));
+    let log =
+        Logger::root_typed(drain, o!("version" => env!("CARGO_PKG_VERSION")));
     let f = "f";
     let d = (1, 2);
     info!(&log, "message"; "f" => %f, "d" => ?d);
 }
-

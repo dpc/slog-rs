@@ -113,12 +113,7 @@
 //! ### Logging to the terminal
 //!
 //! ```ignore
-//! #[macro_use]
-//! extern crate slog;
-//! extern crate slog_term;
-//! extern crate slog_async;
-//!
-//! use slog::Drain;
+//! use slog::{o, Drain};
 //!
 //! fn main() {
 //!     let decorator = slog_term::TermDecorator::new().build();
@@ -132,13 +127,8 @@
 //! ### Logging to a file
 //!
 //! ```ignore
-//! #[macro_use]
-//! extern crate slog;
-//! extern crate slog_term;
-//! extern crate slog_async;
-//!
 //! use std::fs::OpenOptions;
-//! use slog::Drain;
+//! use slog::{o, Drain};
 //!
 //! fn main() {
 //!    let log_path = "target/your_log_file_path.log";
@@ -165,12 +155,7 @@
 //! ### Change logging level at runtime
 //!
 //! ```ignore
-//! #[macro_use]
-//! extern crate slog;
-//! extern crate slog_term;
-//! extern crate slog_async;
-//!
-//! use slog::Drain;
+//! use slog::{o, Drain};
 //!
 //! use std::sync::{Arc, atomic};
 //! use std::sync::atomic::Ordering;
@@ -259,8 +244,7 @@
 //! ### Key-value pairs come now after format string
 //!
 //! ```
-//! #[macro_use]
-//! extern crate slog;
+//! use slog::{info, o};
 //!
 //! fn main() {
 //!     let drain = slog::Discard;
@@ -276,12 +260,7 @@
 //! Create simple terminal logger like this:
 //!
 //! ```ignore
-//! #[macro_use]
-//! extern crate slog;
-//! extern crate slog_term;
-//! extern crate slog_async;
-//!
-//! use slog::Drain;
+//! use slog::{o, Drain};
 //!
 //! fn main() {
 //!     let decorator = slog_term::TermDecorator::new().build();
@@ -300,7 +279,7 @@
 // }}}
 
 // {{{ Imports & meta
-#![warn(missing_docs)]
+#![warn(missing_docs, rust_2018_idioms)]
 #![no_std]
 
 #[cfg(not(feature = "std"))]
@@ -312,19 +291,19 @@ extern crate std;
 mod key;
 pub use self::key::Key;
 #[cfg(not(feature = "std"))]
-use alloc::sync::Arc;
-#[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
 #[cfg(not(feature = "std"))]
 use alloc::rc::Rc;
 #[cfg(not(feature = "std"))]
 use alloc::string::String;
+#[cfg(not(feature = "std"))]
+use alloc::sync::Arc;
 
 #[cfg(feature = "nested-values")]
 extern crate erased_serde;
 
-use core::{convert, fmt, result};
 use core::str::FromStr;
+use core::{convert, fmt, result};
 #[cfg(feature = "std")]
 use std::boxed::Box;
 #[cfg(feature = "std")]
@@ -667,7 +646,7 @@ macro_rules! slog_record(
 ///     impl KV for MyKV {
 ///        fn serialize(&self,
 ///                     _record: &Record,
-///                     serializer: &mut Serializer)
+///                     serializer: &mut dyn Serializer)
 ///                    -> Result {
 ///            serializer.emit_u32("MyK", 16)
 ///        }
@@ -677,7 +656,7 @@ macro_rules! slog_record(
 ///        fn serialize(&self,
 ///                     _record: &Record,
 ///                     key : Key,
-///                     serializer: &mut Serializer)
+///                     serializer: &mut dyn Serializer)
 ///                    -> Result {
 ///            serializer.emit_u32("MyKV", 16)
 ///        }
@@ -1076,7 +1055,7 @@ macro_rules! __slog_builtin {
 /// means `Logger<Arc<SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>`. See
 /// `Logger::root_typed` and `Logger::to_erased` for more information.
 #[derive(Clone)]
-pub struct Logger<D = Arc<SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>
+pub struct Logger<D = Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>
 where
     D: SendSyncUnwindSafeDrain<Ok = (), Err = Never>,
 {
@@ -1121,7 +1100,7 @@ where
     {
         Logger {
             drain: Arc::new(drain)
-                as Arc<SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
+                as Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
             list: OwnedKVList::root(values),
         }
     }
@@ -1199,7 +1178,7 @@ where
     /// Use specific logging functions instead. See `log!` macro
     /// documentation.
     #[inline]
-    pub fn log(&self, record: &Record) {
+    pub fn log(&self, record: &Record<'_>) {
         let _ = self.drain.log(record, &self.list);
     }
 
@@ -1219,13 +1198,13 @@ where
     /// Rust gains trait implementation specialization.
     pub fn into_erased(
         self,
-    ) -> Logger<Arc<SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>
+    ) -> Logger<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>
     where
         D: SendRefUnwindSafeDrain + 'static,
     {
         Logger {
             drain: Arc::new(self.drain)
-                as Arc<SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
+                as Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
             list: self.list,
         }
     }
@@ -1235,7 +1214,7 @@ where
     /// See `into_erased`
     pub fn to_erased(
         &self,
-    ) -> Logger<Arc<SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>
+    ) -> Logger<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>
     where
         D: SendRefUnwindSafeDrain + 'static + Clone,
     {
@@ -1247,8 +1226,8 @@ impl<D> fmt::Debug for Logger<D>
 where
     D: SendSyncUnwindSafeDrain<Ok = (), Err = Never>,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "Logger{:?}", self.list));
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        r#try!(write!(f, "Logger{:?}", self.list));
         Ok(())
     }
 }
@@ -1262,7 +1241,7 @@ where
 
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Self::Err> {
         let chained = OwnedKVList {
@@ -1318,7 +1297,7 @@ pub trait Drain {
     /// * deal with the errors returned from the sub-logger(s)
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Self::Err>;
 
@@ -1356,7 +1335,7 @@ pub trait Drain {
     /// ```
     #[inline]
     fn is_enabled(&self, level: Level) -> bool {
-        level.as_usize() <= ::__slog_static_max_level().as_usize()
+        level.as_usize() <= crate::__slog_static_max_level().as_usize()
     }
 
     /// **Avoid**: See `is_enabled`
@@ -1482,7 +1461,7 @@ impl<'a, D: Drain + 'a> Drain for &'a D {
     #[inline]
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Self::Err> {
         (**self).log(record, values)
@@ -1499,7 +1478,7 @@ impl<'a, D: Drain + 'a> Drain for &'a mut D {
     #[inline]
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Self::Err> {
         (**self).log(record, values)
@@ -1518,11 +1497,7 @@ impl<'a, D: Drain + 'a> Drain for &'a mut D {
 pub trait SendSyncUnwindSafe: Send + Sync + UnwindSafe {}
 
 #[cfg(feature = "std")]
-impl<T> SendSyncUnwindSafe for T
-where
-    T: Send + Sync + UnwindSafe + ?Sized,
-{
-}
+impl<T> SendSyncUnwindSafe for T where T: Send + Sync + UnwindSafe + ?Sized {}
 
 #[cfg(feature = "std")]
 /// `Drain + Send + Sync + UnwindSafe` bound
@@ -1532,9 +1507,8 @@ where
 pub trait SendSyncUnwindSafeDrain: Drain + Send + Sync + UnwindSafe {}
 
 #[cfg(feature = "std")]
-impl<T> SendSyncUnwindSafeDrain for T
-where
-    T: Drain + Send + Sync + UnwindSafe + ?Sized,
+impl<T> SendSyncUnwindSafeDrain for T where
+    T: Drain + Send + Sync + UnwindSafe + ?Sized
 {
 }
 
@@ -1543,50 +1517,52 @@ where
 ///
 /// This type is used to enforce `Drain`s associated with `Logger`s
 /// are thread-safe.
-pub trait SendSyncRefUnwindSafeDrain: Drain + Send + Sync + RefUnwindSafe {}
+pub trait SendSyncRefUnwindSafeDrain:
+    Drain + Send + Sync + RefUnwindSafe
+{
+}
 
 #[cfg(feature = "std")]
-impl<T> SendSyncRefUnwindSafeDrain for T
-where
-    T: Drain + Send + Sync + RefUnwindSafe + ?Sized,
+impl<T> SendSyncRefUnwindSafeDrain for T where
+    T: Drain + Send + Sync + RefUnwindSafe + ?Sized
 {
 }
 
 #[cfg(feature = "std")]
 /// Function that can be used in `MapErr` drain
-pub trait MapErrFn<EI, EO>
-    : 'static + Sync + Send + UnwindSafe + RefUnwindSafe + Fn(EI) -> EO {
+pub trait MapErrFn<EI, EO>:
+    'static + Sync + Send + UnwindSafe + RefUnwindSafe + Fn(EI) -> EO
+{
 }
 
 #[cfg(feature = "std")]
-impl<T, EI, EO> MapErrFn<EI, EO> for T
-where
+impl<T, EI, EO> MapErrFn<EI, EO> for T where
     T: 'static
         + Sync
         + Send
         + ?Sized
         + UnwindSafe
         + RefUnwindSafe
-        + Fn(EI) -> EO,
+        + Fn(EI) -> EO
 {
 }
 
 #[cfg(feature = "std")]
 /// Function that can be used in `Filter` drain
-pub trait FilterFn
-    : 'static + Sync + Send + UnwindSafe + RefUnwindSafe + Fn(&Record) -> bool {
+pub trait FilterFn:
+    'static + Sync + Send + UnwindSafe + RefUnwindSafe + Fn(&Record<'_>) -> bool
+{
 }
 
 #[cfg(feature = "std")]
-impl<T> FilterFn for T
-where
+impl<T> FilterFn for T where
     T: 'static
         + Sync
         + Send
         + ?Sized
         + UnwindSafe
         + RefUnwindSafe
-        + Fn(&Record) -> bool,
+        + Fn(&Record<'_>) -> bool
 {
 }
 
@@ -1598,11 +1574,7 @@ where
 pub trait SendSyncUnwindSafeDrain: Drain + Send + Sync {}
 
 #[cfg(not(feature = "std"))]
-impl<T> SendSyncUnwindSafeDrain for T
-where
-    T: Drain + Send + Sync + ?Sized,
-{
-}
+impl<T> SendSyncUnwindSafeDrain for T where T: Drain + Send + Sync + ?Sized {}
 
 #[cfg(not(feature = "std"))]
 /// `Drain + Send + Sync + RefUnwindSafe` bound
@@ -1612,20 +1584,15 @@ where
 pub trait SendSyncRefUnwindSafeDrain: Drain + Send + Sync {}
 
 #[cfg(not(feature = "std"))]
-impl<T> SendSyncRefUnwindSafeDrain for T
-where
-    T: Drain + Send + Sync + ?Sized,
-{
-}
+impl<T> SendSyncRefUnwindSafeDrain for T where T: Drain + Send + Sync + ?Sized {}
 
 #[cfg(feature = "std")]
 /// `Drain + Send + RefUnwindSafe` bound
 pub trait SendRefUnwindSafeDrain: Drain + Send + RefUnwindSafe {}
 
 #[cfg(feature = "std")]
-impl<T> SendRefUnwindSafeDrain for T
-where
-    T: Drain + Send + RefUnwindSafe + ?Sized,
+impl<T> SendRefUnwindSafeDrain for T where
+    T: Drain + Send + RefUnwindSafe + ?Sized
 {
 }
 
@@ -1634,31 +1601,25 @@ where
 pub trait SendRefUnwindSafeDrain: Drain + Send {}
 
 #[cfg(not(feature = "std"))]
-impl<T> SendRefUnwindSafeDrain for T
-where
-    T: Drain + Send + ?Sized,
-{
-}
+impl<T> SendRefUnwindSafeDrain for T where T: Drain + Send + ?Sized {}
 
 #[cfg(not(feature = "std"))]
 /// Function that can be used in `MapErr` drain
 pub trait MapErrFn<EI, EO>: 'static + Sync + Send + Fn(EI) -> EO {}
 
 #[cfg(not(feature = "std"))]
-impl<T, EI, EO> MapErrFn<EI, EO> for T
-where
-    T: 'static + Sync + Send + ?Sized + Fn(EI) -> EO,
+impl<T, EI, EO> MapErrFn<EI, EO> for T where
+    T: 'static + Sync + Send + ?Sized + Fn(EI) -> EO
 {
 }
 
 #[cfg(not(feature = "std"))]
 /// Function that can be used in `Filter` drain
-pub trait FilterFn: 'static + Sync + Send + Fn(&Record) -> bool {}
+pub trait FilterFn: 'static + Sync + Send + Fn(&Record<'_>) -> bool {}
 
 #[cfg(not(feature = "std"))]
-impl<T> FilterFn for T
-where
-    T: 'static + Sync + Send + ?Sized + Fn(&Record) -> bool,
+impl<T> FilterFn for T where
+    T: 'static + Sync + Send + ?Sized + Fn(&Record<'_>) -> bool
 {
 }
 
@@ -1667,7 +1628,7 @@ impl<D: Drain + ?Sized> Drain for Box<D> {
     type Err = D::Err;
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         o: &OwnedKVList,
     ) -> result::Result<Self::Ok, D::Err> {
         (**self).log(record, o)
@@ -1683,7 +1644,7 @@ impl<D: Drain + ?Sized> Drain for Arc<D> {
     type Err = D::Err;
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         o: &OwnedKVList,
     ) -> result::Result<Self::Ok, D::Err> {
         (**self).log(record, o)
@@ -1703,7 +1664,11 @@ pub struct Discard;
 impl Drain for Discard {
     type Ok = ();
     type Err = Never;
-    fn log(&self, _: &Record, _: &OwnedKVList) -> result::Result<(), Never> {
+    fn log(
+        &self,
+        _: &Record<'_>,
+        _: &OwnedKVList,
+    ) -> result::Result<(), Never> {
         Ok(())
     }
     #[inline]
@@ -1719,7 +1684,7 @@ impl Drain for Discard {
 #[derive(Debug, Clone)]
 pub struct Filter<D: Drain, F>(pub D, pub F)
 where
-    F: Fn(&Record) -> bool + 'static + Send + Sync;
+    F: Fn(&Record<'_>) -> bool + 'static + Send + Sync;
 
 impl<D: Drain, F> Filter<D, F>
 where
@@ -1739,7 +1704,7 @@ where
     type Err = D::Err;
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         logger_values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Self::Err> {
         if (self.1)(record) {
@@ -1783,7 +1748,7 @@ impl<D: Drain> Drain for LevelFilter<D> {
     type Err = D::Err;
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         logger_values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Self::Err> {
         if record.level().is_at_least(self.1) {
@@ -1804,7 +1769,7 @@ impl<D: Drain> Drain for LevelFilter<D> {
 pub struct MapError<D: Drain, E> {
     drain: D,
     // eliminated dynamic dispatch, after rust learns `-> impl Trait`
-    map_fn: Box<MapErrFn<D::Err, E, Output = E>>,
+    map_fn: Box<dyn MapErrFn<D::Err, E, Output = E>>,
 }
 
 impl<D: Drain, E> MapError<D, E> {
@@ -1825,7 +1790,7 @@ impl<D: Drain, E> Drain for MapError<D, E> {
     type Err = E;
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         logger_values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Self::Err> {
         self.drain
@@ -1859,7 +1824,7 @@ impl<D1: Drain, D2: Drain> Drain for Duplicate<D1, D2> {
     );
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         logger_values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Self::Err> {
         let res1 = self.0.log(record, logger_values);
@@ -1906,10 +1871,11 @@ where
     type Err = Never;
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         logger_values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Never> {
-        let _ = self.0
+        let _ = self
+            .0
             .log(record, logger_values)
             .unwrap_or_else(|e| panic!("slog::Fuse Drain: {:?}", e));
         Ok(())
@@ -1942,7 +1908,7 @@ impl<D: Drain> Drain for IgnoreResult<D> {
     type Err = Never;
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         logger_values: &OwnedKVList,
     ) -> result::Result<(), Never> {
         let _ = self.drain.log(record, logger_values);
@@ -1971,7 +1937,10 @@ where
     D: Drain,
     D::Err: fmt::Debug,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> result::Result<(), fmt::Error> {
         match *self {
             MutexDrainError::Mutex => write!(f, "MutexDrainError::Mutex"),
             MutexDrainError::Drain(ref e) => e.fmt(f),
@@ -1992,7 +1961,7 @@ where
         }
     }
 
-    fn cause(&self) -> Option<&std::error::Error> {
+    fn cause(&self) -> Option<&dyn std::error::Error> {
         match *self {
             MutexDrainError::Mutex => None,
             MutexDrainError::Drain(ref e) => Some(e),
@@ -2002,7 +1971,8 @@ where
 
 #[cfg(feature = "std")]
 impl<'a, D: Drain> From<std::sync::PoisonError<std::sync::MutexGuard<'a, D>>>
-    for MutexDrainError<D> {
+    for MutexDrainError<D>
+{
     fn from(
         _: std::sync::PoisonError<std::sync::MutexGuard<'a, D>>,
     ) -> MutexDrainError<D> {
@@ -2015,7 +1985,10 @@ impl<D: Drain> fmt::Display for MutexDrainError<D>
 where
     D::Err: fmt::Display,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> result::Result<(), fmt::Error> {
         match *self {
             MutexDrainError::Mutex => write!(f, "MutexError"),
             MutexDrainError::Drain(ref e) => write!(f, "{}", e),
@@ -2029,7 +2002,7 @@ impl<D: Drain> Drain for std::sync::Mutex<D> {
     type Err = MutexDrainError<D>;
     fn log(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         logger_values: &OwnedKVList,
     ) -> result::Result<Self::Ok, Self::Err> {
         let d = self.lock()?;
@@ -2223,20 +2196,21 @@ fn index_of_str_ignore_case(haystack: &[&str], needle: &str) -> Option<usize> {
     if needle.is_empty() {
         return None;
     }
-    haystack.iter()
+    haystack
+        .iter()
         // This will never panic because haystack has only ASCII characters
         .map(|hay| &hay[..needle.len().min(hay.len())])
         .position(|hay| hay.eq_ignore_ascii_case(needle))
 }
 
 impl fmt::Display for Level {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_short_str())
     }
 }
 
 impl fmt::Display for FilterLevel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_short_str())
     }
 }
@@ -2325,25 +2299,34 @@ fn filter_level_from_str() {
 
 #[cfg(test)]
 fn assert_from_str<T>(expected: T, level_str: &str)
-    where
-        T: FromStr + fmt::Debug + PartialEq,
-        T::Err: fmt::Debug {
+where
+    T: FromStr + fmt::Debug + PartialEq,
+    T::Err: fmt::Debug,
+{
     let result = T::from_str(level_str);
 
     let actual = result.unwrap_or_else(|e| {
         panic!("Failed to parse filter level '{}': {:?}", level_str, e)
     });
-    assert_eq!(expected, actual, "Invalid filter level parsed from '{}'", level_str);
+    assert_eq!(
+        expected, actual,
+        "Invalid filter level parsed from '{}'",
+        level_str
+    );
 }
 
 #[cfg(test)]
 fn refute_from_str<T>(level_str: &str)
-    where
-        T: FromStr + fmt::Debug {
+where
+    T: FromStr + fmt::Debug,
+{
     let result = T::from_str(level_str);
 
     if let Ok(level) = result {
-        panic!("Parsing filter level '{}' succeeded: {:?}", level_str, level)
+        panic!(
+            "Parsing filter level '{}' succeeded: {:?}",
+            level_str, level
+        )
     }
 }
 
@@ -2372,15 +2355,22 @@ fn filter_level_to_string_and_from_str_are_compatible() {
 
 #[cfg(all(test, feature = "std"))]
 fn assert_to_string_from_str<T>(expected: T)
-    where
-        T: std::string::ToString + FromStr + PartialEq + fmt::Debug,
-        <T as FromStr>::Err: fmt::Debug {
+where
+    T: std::string::ToString + FromStr + PartialEq + fmt::Debug,
+    <T as FromStr>::Err: fmt::Debug,
+{
     let string = expected.to_string();
 
-    let actual = T::from_str(&string)
-        .expect(&format!("Failed to parse string representation of {:?}", expected));
+    let actual = T::from_str(&string).expect(&format!(
+        "Failed to parse string representation of {:?}",
+        expected
+    ));
 
-    assert_eq!(expected, actual, "Invalid value parsed from string representation of {:?}", actual);
+    assert_eq!(
+        expected, actual,
+        "Invalid value parsed from string representation of {:?}",
+        actual
+    );
 }
 
 #[test]
@@ -2461,7 +2451,7 @@ impl<'a> Record<'a> {
     }
 
     /// Get a log record message
-    pub fn msg(&self) -> &fmt::Arguments {
+    pub fn msg(&self) -> &fmt::Arguments<'_> {
         self.msg
     }
 
@@ -2520,7 +2510,7 @@ impl<'a> Record<'a> {
     }
 
     /// Get key-value pairs
-    pub fn kv(&self) -> BorrowedKV {
+    pub fn kv(&self) -> BorrowedKV<'_> {
         BorrowedKV(self.kv.0)
     }
 }
@@ -2559,16 +2549,16 @@ macro_rules! impl_default_as_fmt{
 /// `&Serializer` (without : Sized, which break object safety), but it can be
 /// used as <T: Serializer>.
 #[cfg(feature = "nested-values")]
-struct SerializerForward<'a, T: 'a + ?Sized>(&'a mut T);
+struct SerializerForward<'a, T: ?Sized>(&'a mut T);
 
 #[cfg(feature = "nested-values")]
 impl<'a, T: Serializer + 'a + ?Sized> Serializer for SerializerForward<'a, T> {
-    fn emit_arguments(&mut self, key: Key, val: &fmt::Arguments) -> Result {
+    fn emit_arguments(&mut self, key: Key, val: &fmt::Arguments<'_>) -> Result {
         self.0.emit_arguments(key, val)
     }
 
     #[cfg(feature = "nested-values")]
-    fn emit_serde(&mut self, _key: Key, _value: &SerdeValue) -> Result {
+    fn emit_serde(&mut self, _key: Key, _value: &dyn SerdeValue) -> Result {
         panic!();
     }
 }
@@ -2664,7 +2654,7 @@ pub trait Serializer {
     /// This is the only method that has to implemented, but for performance and
     /// to retain type information most serious `Serializer`s will want to
     /// implement all other methods as well.
-    fn emit_arguments(&mut self, key: Key, val: &fmt::Arguments) -> Result;
+    fn emit_arguments(&mut self, key: Key, val: &fmt::Arguments<'_>) -> Result;
 
     /// Emit a value implementing
     /// [`serde::Serialize`](https://docs.rs/serde/1/serde/trait.Serialize.html)
@@ -2676,7 +2666,7 @@ pub trait Serializer {
     ///
     /// The value needs to implement `SerdeValue`.
     #[cfg(feature = "nested-values")]
-    fn emit_serde(&mut self, key: Key, value: &SerdeValue) -> Result {
+    fn emit_serde(&mut self, key: Key, value: &dyn SerdeValue) -> Result {
         value.serialize_fallback(key, &mut SerializerForward(self))
     }
 }
@@ -2692,7 +2682,7 @@ impl<F> Serializer for AsFmtSerializer<F>
 where
     F: for<'a> FnMut(Key, fmt::Arguments<'a>) -> Result,
 {
-    fn emit_arguments(&mut self, key: Key, val: &fmt::Arguments) -> Result {
+    fn emit_arguments(&mut self, key: Key, val: &fmt::Arguments<'_>) -> Result {
         (self.0)(key, *val)
     }
 }
@@ -2716,19 +2706,19 @@ pub trait SerdeValue: erased_serde::Serialize + Value {
     fn serialize_fallback(
         &self,
         _key: Key,
-        _serializer: &mut Serializer,
+        _serializer: &mut dyn Serializer,
     ) -> Result<()> {
         Err(Error::Other)
     }
 
     /// Convert to `erased_serialize::Serialize` of the underlying value,
     /// so `slog::Serializer`s can use it to serialize via `serde`.
-    fn as_serde(&self) -> &erased_serde::Serialize;
+    fn as_serde(&self) -> &dyn erased_serde::Serialize;
 
     /// Convert to a boxed value that can be sent across threads
     ///
     /// This enables functionality like `slog-async` and similar.
-    fn to_sendable(&self) -> Box<SerdeValue + Send + 'static>;
+    fn to_sendable(&self) -> Box<dyn SerdeValue + Send + 'static>;
 }
 
 // }}}
@@ -2763,9 +2753,9 @@ pub trait Value {
     /// only call respective methods of `serializer`.
     fn serialize(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result;
 }
 
@@ -2775,22 +2765,23 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         (*self).serialize(record, key, serializer)
     }
 }
 
-macro_rules! impl_value_for{
+macro_rules! impl_value_for {
     ($t:ty, $f:ident) => {
         impl Value for $t {
-            fn serialize(&self,
-                         _record : &Record,
-                         key : Key,
-                         serializer : &mut Serializer
-                         ) -> Result {
+            fn serialize(
+                &self,
+                _record: &Record<'_>,
+                key: Key,
+                serializer: &mut dyn Serializer,
+            ) -> Result {
                 serializer.$f(key, *self)
             }
         }
@@ -2819,9 +2810,9 @@ impl_value_for!(i128, emit_i128);
 impl Value for () {
     fn serialize(
         &self,
-        _record: &Record,
+        _record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         serializer.emit_unit(key)
     }
@@ -2830,9 +2821,9 @@ impl Value for () {
 impl Value for str {
     fn serialize(
         &self,
-        _record: &Record,
+        _record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         serializer.emit_str(key, self)
     }
@@ -2841,9 +2832,9 @@ impl Value for str {
 impl<'a> Value for fmt::Arguments<'a> {
     fn serialize(
         &self,
-        _record: &Record,
+        _record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         serializer.emit_arguments(key, self)
     }
@@ -2852,9 +2843,9 @@ impl<'a> Value for fmt::Arguments<'a> {
 impl Value for String {
     fn serialize(
         &self,
-        _record: &Record,
+        _record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         serializer.emit_str(key, self.as_str())
     }
@@ -2863,9 +2854,9 @@ impl Value for String {
 impl<T: Value> Value for Option<T> {
     fn serialize(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         match *self {
             Some(ref s) => s.serialize(record, key, serializer),
@@ -2880,9 +2871,9 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         (**self).serialize(record, key, serializer)
     }
@@ -2893,9 +2884,9 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         (**self).serialize(record, key, serializer)
     }
@@ -2907,9 +2898,9 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         (**self).serialize(record, key, serializer)
     }
@@ -2921,9 +2912,9 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         self.0.serialize(record, key, serializer)
     }
@@ -2933,9 +2924,9 @@ where
 impl<'a> Value for std::path::Display<'a> {
     fn serialize(
         &self,
-        _record: &Record,
+        _record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         serializer.emit_arguments(key, &format_args!("{}", *self))
     }
@@ -2945,9 +2936,9 @@ impl<'a> Value for std::path::Display<'a> {
 impl Value for std::net::SocketAddr {
     fn serialize(
         &self,
-        _record: &Record,
+        _record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         serializer.emit_arguments(key, &format_args!("{}", self))
     }
@@ -2964,9 +2955,9 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         (self.0)(record).serialize(record, key, serializer)
     }
@@ -2983,7 +2974,7 @@ pub type PushFnSerializer<'a> = PushFnValueSerializer<'a>;
 pub struct PushFnValueSerializer<'a> {
     record: &'a Record<'a>,
     key: Key,
-    serializer: &'a mut Serializer,
+    serializer: &'a mut dyn Serializer,
     done: bool,
 }
 
@@ -3059,9 +3050,9 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
+        record: &Record<'_>,
         key: Key,
-        serializer: &mut Serializer,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         let ser = PushFnValueSerializer {
             record: record,
@@ -3115,7 +3106,7 @@ where
 /// struct MyNewType(i64);
 ///
 /// impl KV for MyNewType {
-///    fn serialize(&self, _rec: &Record, serializer: &mut Serializer) -> Result {
+///    fn serialize(&self, _rec: &Record, serializer: &mut dyn Serializer) -> Result {
 ///        serializer.emit_i64("my_new_type", self.0)
 ///    }
 /// }
@@ -3130,8 +3121,11 @@ pub trait KV {
     ///
     /// `KV` should call respective `Serializer` methods
     /// for each key-value pair it contains.
-    fn serialize(&self, record: &Record, serializer: &mut Serializer)
-        -> Result;
+    fn serialize(
+        &self,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
+    ) -> Result;
 }
 
 impl<'a, T> KV for &'a T
@@ -3140,8 +3134,8 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
-        serializer: &mut Serializer,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         (**self).serialize(record, serializer)
     }
@@ -3161,7 +3155,10 @@ impl<T> SendSyncRefUnwindSafeKV for T where T: KV + ?Sized {}
 pub trait SendSyncRefUnwindSafeKV: KV + Send + Sync + RefUnwindSafe {}
 
 #[cfg(all(not(feature = "nothreads"), feature = "std"))]
-impl<T> SendSyncRefUnwindSafeKV for T where T: KV + Send + Sync + RefUnwindSafe + ?Sized {}
+impl<T> SendSyncRefUnwindSafeKV for T where
+    T: KV + Send + Sync + RefUnwindSafe + ?Sized
+{
+}
 
 #[cfg(all(not(feature = "nothreads"), not(feature = "std")))]
 /// This type is used to enforce `KV`s stored in `Logger`s are thread-safe.
@@ -3200,8 +3197,8 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
-        serializer: &mut Serializer,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         self.1.serialize(record, self.0.clone(), serializer)
     }
@@ -3210,8 +3207,8 @@ where
 impl KV for () {
     fn serialize(
         &self,
-        _record: &Record,
-        _serializer: &mut Serializer,
+        _record: &Record<'_>,
+        _serializer: &mut dyn Serializer,
     ) -> Result {
         Ok(())
     }
@@ -3220,10 +3217,10 @@ impl KV for () {
 impl<T: KV, R: KV> KV for (T, R) {
     fn serialize(
         &self,
-        record: &Record,
-        serializer: &mut Serializer,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
     ) -> Result {
-        try!(self.0.serialize(record, serializer));
+        r#try!(self.0.serialize(record, serializer));
         self.1.serialize(record, serializer)
     }
 }
@@ -3234,8 +3231,8 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
-        serializer: &mut Serializer,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         (**self).serialize(record, serializer)
     }
@@ -3247,8 +3244,8 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
-        serializer: &mut Serializer,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         (**self).serialize(record, serializer)
     }
@@ -3260,8 +3257,8 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
-        serializer: &mut Serializer,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         self.0.serialize(record, serializer)
     }
@@ -3270,8 +3267,8 @@ where
 impl<'a> KV for BorrowedKV<'a> {
     fn serialize(
         &self,
-        record: &Record,
-        serializer: &mut Serializer,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
     ) -> Result {
         self.0.serialize(record, serializer)
     }
@@ -3313,7 +3310,7 @@ pub struct BorrowedKV<'a>(
     /// macros should be used instead to create
     /// `BorrowedKV` instances.
     #[doc(hidden)]
-    pub &'a KV,
+    pub &'a dyn KV,
 );
 
 // }}}
@@ -3323,19 +3320,19 @@ struct OwnedKVListNode<T>
 where
     T: SendSyncRefUnwindSafeKV + 'static,
 {
-    next_node: Arc<SendSyncRefUnwindSafeKV + 'static>,
+    next_node: Arc<dyn SendSyncRefUnwindSafeKV + 'static>,
     kv: T,
 }
 
 struct MultiListNode {
-    next_node: Arc<SendSyncRefUnwindSafeKV + 'static>,
-    node: Arc<SendSyncRefUnwindSafeKV + 'static>,
+    next_node: Arc<dyn SendSyncRefUnwindSafeKV + 'static>,
+    node: Arc<dyn SendSyncRefUnwindSafeKV + 'static>,
 }
 
 /// Chain of `SyncMultiSerialize`-s of a `Logger` and its ancestors
 #[derive(Clone)]
 pub struct OwnedKVList {
-    node: Arc<SendSyncRefUnwindSafeKV + 'static>,
+    node: Arc<dyn SendSyncRefUnwindSafeKV + 'static>,
 }
 
 impl<T> KV for OwnedKVListNode<T>
@@ -3344,11 +3341,11 @@ where
 {
     fn serialize(
         &self,
-        record: &Record,
-        serializer: &mut Serializer,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
     ) -> Result {
-        try!(self.kv.serialize(record, serializer));
-        try!(self.next_node.serialize(record, serializer));
+        r#try!(self.kv.serialize(record, serializer));
+        r#try!(self.next_node.serialize(record, serializer));
 
         Ok(())
     }
@@ -3357,11 +3354,11 @@ where
 impl KV for MultiListNode {
     fn serialize(
         &self,
-        record: &Record,
-        serializer: &mut Serializer,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
     ) -> Result {
-        try!(self.next_node.serialize(record, serializer));
-        try!(self.node.serialize(record, serializer));
+        r#try!(self.next_node.serialize(record, serializer));
+        r#try!(self.node.serialize(record, serializer));
 
         Ok(())
     }
@@ -3370,47 +3367,46 @@ impl KV for MultiListNode {
 impl KV for OwnedKVList {
     fn serialize(
         &self,
-        record: &Record,
-        serializer: &mut Serializer,
+        record: &Record<'_>,
+        serializer: &mut dyn Serializer,
     ) -> Result {
-        try!(self.node.serialize(record, serializer));
+        r#try!(self.node.serialize(record, serializer));
 
         Ok(())
     }
 }
 
 impl fmt::Debug for OwnedKVList {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "("));
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        r#try!(write!(f, "("));
         let mut i = 0;
 
         {
             let mut as_str_ser = AsFmtSerializer(|key, _val| {
                 if i != 0 {
-                    try!(write!(f, ", "));
+                    r#try!(write!(f, ", "));
                 }
 
-                try!(write!(f, "{}", key));
+                r#try!(write!(f, "{}", key));
                 i += 1;
                 Ok(())
             });
             let record_static = record_static!(Level::Trace, "");
 
-            try!(
-                self.node
-                    .serialize(
-                        &Record::new(
-                            &record_static,
-                            &format_args!(""),
-                            BorrowedKV(&STATIC_TERMINATOR_UNIT)
-                        ),
-                        &mut as_str_ser
-                    )
-                    .map_err(|_| fmt::Error)
-            );
+            r#try!(self
+                .node
+                .serialize(
+                    &Record::new(
+                        &record_static,
+                        &format_args!(""),
+                        BorrowedKV(&STATIC_TERMINATOR_UNIT)
+                    ),
+                    &mut as_str_ser
+                )
+                .map_err(|_| fmt::Error));
         }
 
-        try!(write!(f, ")"));
+        r#try!(write!(f, ")"));
         Ok(())
     }
 }
@@ -3432,7 +3428,7 @@ impl OwnedKVList {
     /// New `OwnedKVList` node with an existing parent
     fn new<T>(
         values: OwnedKV<T>,
-        next_node: Arc<SendSyncRefUnwindSafeKV + 'static>,
+        next_node: Arc<dyn SendSyncRefUnwindSafeKV + 'static>,
     ) -> Self
     where
         T: SendSyncRefUnwindSafeKV + 'static,
@@ -3521,7 +3517,7 @@ impl std::error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&std::error::Error> {
+    fn cause(&self) -> Option<&dyn std::error::Error> {
         match *self {
             Error::Io(ref e) => Some(e),
             Error::Fmt(ref e) => Some(e),
@@ -3532,7 +3528,7 @@ impl std::error::Error for Error {
 
 #[cfg(feature = "std")]
 impl core::fmt::Display for Error {
-    fn fmt(&self, fmt: &mut core::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, fmt: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Error::Io(ref e) => e.fmt(fmt),
             Error::Fmt(ref e) => e.fmt(fmt),
@@ -3610,7 +3606,7 @@ pub fn __slog_static_max_level() -> FilterLevel {
 // {{{ Slog v1 Compat
 #[deprecated(note = "Renamed to `Value`")]
 /// Compatibility name to ease upgrading from `slog v1`
-pub type Serialize = Value;
+pub type Serialize = dyn Value;
 
 #[deprecated(note = "Renamed to `PushFnValue`")]
 /// Compatibility name to ease upgrading from `slog v1`
@@ -3628,8 +3624,9 @@ pub type OwnedKeyValueList = OwnedKVList;
 /// Compatibility name to ease upgrading from `slog v1`
 pub mod ser {
     #[allow(deprecated)]
-    pub use super::{OwnedKeyValueList, PushLazy, Serialize, Serializer,
-                    ValueSerializer};
+    pub use super::{
+        OwnedKeyValueList, PushLazy, Serialize, Serializer, ValueSerializer,
+    };
 }
 // }}}
 

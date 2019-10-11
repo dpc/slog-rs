@@ -3,15 +3,15 @@ cache:
   - cargo
 rust:
   - stable
-  - 1.23.0
+  - 1.31.0
   - beta
   - nightly
 
 script:
     # `patch` section is recent addition
-  - if [ "$TRAVIS_RUST_VERSION" != "1.23.0" ]; then make all ; fi
-  - if [ "$TRAVIS_RUST_VERSION" == "1.23.0" ]; then make build ; fi
-  - if [ "$TRAVIS_RUST_VERSION" != "1.23.0" ]; then make travistest ; fi
+  - if [ "$TRAVIS_RUST_VERSION" != "1.31.0" ]; then make all ; fi
+  - if [ "$TRAVIS_RUST_VERSION" == "1.31.0" ]; then make build ; fi
+  - if [ "$TRAVIS_RUST_VERSION" != "1.31.0" ]; then make travistest ; fi
   - if [ "$TRAVIS_RUST_VERSION" == "nightly" ]; then make bench ; fi
   - if [ "$TRAVIS_RUST_VERSION" == "nightly" ]; then cargo build --no-default-features; cargo test --no-default-features; fi
   - if [ "$TRAVIS_RUST_VERSION" == "nightly" ]; then cargo test -p test_edition2018; fi

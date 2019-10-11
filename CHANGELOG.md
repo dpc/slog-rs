@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+* Updated crate to Rust 2018
+* Lowest supported `rustc` version is now `1.31.0`
+
 ## 2.5.2 - 2019-07-22
 
 * Restored parsing of `Level` and `FilterLevel` truncated names

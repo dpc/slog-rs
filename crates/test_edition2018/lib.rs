@@ -1,5 +1,3 @@
-extern crate slog;
-
 #[cfg(test)]
 mod tests {
     #[test]
@@ -28,12 +26,19 @@ mod tests {
         // checks if the built-in macros are correctly resolved.
         slog::log!(logger, slog::Level::Info, "", "logger message");
         slog::log!(logger, slog::Level::Info, "", "{}", 42);
-        slog::log!(logger, slog::Level::Info, "", "{}{}", a="A", b="B");
+        slog::log!(logger, slog::Level::Info, "", "{}{}", a = "A", b = "B");
         slog::log!(logger, slog::Level::Info, "", "{}", a="A"; "id" => 42);
 
         slog::slog_log!(logger, slog::Level::Info, "", "logger message");
         slog::slog_log!(logger, slog::Level::Info, "", "{}", 42);
-        slog::slog_log!(logger, slog::Level::Info, "", "{}{}", a="A", b="B");
+        slog::slog_log!(
+            logger,
+            slog::Level::Info,
+            "",
+            "{}{}",
+            a = "A",
+            b = "B"
+        );
         slog::slog_log!(logger, slog::Level::Info, "", "{}", a="A"; "id" => 42);
 
         // checks if `local_inner_macros` works correctly.
