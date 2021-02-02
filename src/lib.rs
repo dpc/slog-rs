@@ -2527,7 +2527,7 @@ impl<'a> Record<'a> {
     /// flag for quick lookup in the `Drain`s. As such should be used carefully
     /// and mostly in application code (as opposed to libraries) - where tag
     /// meaning across the system can be coordinated. When used in libraries,
-    /// make sure to prefix it with something reasonably distinct, like create
+    /// make sure to prefix it with something reasonably distinct, like crate
     /// name.
     pub fn tag(&self) -> &str {
         self.rstatic.tag
