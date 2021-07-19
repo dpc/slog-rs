@@ -322,6 +322,8 @@ use alloc::string::String;
 
 #[cfg(feature = "nested-values")]
 extern crate erased_serde;
+#[cfg(feature = "nested-values")]
+extern crate serde;
 
 use core::{convert, fmt, result};
 use core::str::FromStr;
@@ -2802,6 +2804,51 @@ pub trait SerdeValue: erased_serde::Serialize + Value {
     fn to_sendable(&self) -> Box<SerdeValue + Send + 'static>;
 }
 
+/// Use to wrap a value that implements [serde::Serialize] so it's written to
+/// the log record as an object, rather than a primitive.
+///
+/// # Examples
+/// ```
+/// # #[macro_use]
+/// # extern crate serde_derive;
+/// # use serde_derive::Serialize;
+/// # use slog::{info, o, Drain, Logger};
+///
+/// #[derive(Clone, Serialize)]
+/// struct Thing {
+///     one: String,
+///     two: String,
+/// }
+///
+/// # fn main() {
+/// #   let log = Logger::root(slog::Discard, o!());
+/// #   fn get_thing() -> Thing { Thing{ one: "a".to_string(), two: "b".to_string() } }
+///
+///     let thing = get_thing();
+///
+///     info!(log, "Got a thing"; "thing" => slog::Serde(thing.clone()));
+/// # }
+/// ```
+#[cfg(feature = "nested-values")]
+#[derive(Clone, serde_derive::Serialize)]
+pub struct Serde<T>(pub T)
+where
+    T: serde::Serialize + Clone + Send + 'static;
+
+#[cfg(feature = "nested-values")]
+impl<T> SerdeValue for Serde<T>
+where
+    T: serde::Serialize + Clone + Send + 'static,
+{
+    fn as_serde(&self) -> &dyn erased_serde::Serialize {
+        &self.0
+    }
+
+    fn to_sendable(&self) -> Box<dyn SerdeValue + Send + 'static> {
+        Box::new(self.clone())
+    }
+}
+
 // }}}
 
 // {{{ Value
@@ -3179,6 +3226,21 @@ where
         serializer: &mut Serializer,
     ) -> Result {
         serializer.emit_error(key, &self.0)
+    }
+}
+
+#[cfg(feature = "nested-values")]
+impl<T> Value for Serde<T>
+where
+    T: serde::Serialize + Clone + Send + 'static,
+{
+    fn serialize(
+        &self,
+        _: &Record<'_>,
+        key: Key,
+        serializer: &mut Serializer,
+    ) -> Result {
+        serializer.emit_serde(key, self)
     }
 }
 

@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Implement `Eq` for dynamic `Key`s
 * Add `emit_error` to `Serializer`, `#` for serializing foreign errors, and
   `impl Value for std::io::Error`
+* Add `Serde` (if `nested-values` feature is enabled) to optionally wrap a value
+  that implements [serde::Serialize] so it's written to the log record as an
+  object, rather than a primitive.
 
 ## 2.6.0 - 2019-10-28
 

@@ -27,7 +27,7 @@ lto = true
 debug-assertions = false
 
 [features]
-nested-values = ["erased-serde"]
+nested-values = ["erased-serde", "serde", "serde_derive"]
 dynamic-keys = []
 std = []
 nothreads = []
@@ -49,6 +49,8 @@ release_max_level_trace = []
 
 [dependencies]
 erased-serde = { version = "0.3", optional = true }
+serde = { version = "1", optional = true }
+serde_derive = { version = "1", optional = true }
 
 [[example]]
 name = "singlethread"
